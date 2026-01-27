@@ -1,16 +1,15 @@
-name: CI - Calidad y Build
+name: CI/CD - Calidad y Despliegue
 
-# CAMBIO AQUÍ: Eliminamos la lista de ramas
-# Ahora se ejecutará en CUALQUIER push o pull request
 on:
   push:
+    # Se ejecuta en push a cualquier rama
   pull_request:
 
 jobs:
+  # TAREA 1: TU CI EXISTENTE (Linter y Build de prueba)
   build-and-test:
-    name: Verificar Código
+    name: Verificar Código (CI)
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -29,3 +28,24 @@ jobs:
 
       - name: Verificar Build
         run: npm run build
+
+  # TAREA 2: DESPLIEGUE A VERCEL (CD)
+  deploy:
+    name: Desplegar a Vercel
+    needs: build-and-test # <--- ESTA ES LA CLAVE: Espera a que el CI pase
+    runs-on: ubuntu-latest
+    # Solo desplegamos si es un push (no en PRs abiertas para evitar duplicados si usas Vercel Bot)
+    # Opcional: elimina el 'if' si quieres previews en PRs también desde aquí.
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Desplegar a Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          # Lógica: Si es la rama 'main' usa '--prod', si no, despliega como Preview
+          vercel-args: ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}
