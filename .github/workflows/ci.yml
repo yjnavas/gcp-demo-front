@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  # TAREA 1: TU CI EXISTENTE (Linter y Build de prueba)
+  # TAREA 1: VERIFICACIÓN DE CÓDIGO (Lint, Build y Tests)
   build-and-test:
     name: Verificar Código (CI)
     runs-on: ubuntu-latest
@@ -23,19 +23,35 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      # 1. Validar estilo de código
       - name: Ejecutar Lint
         run: npm run lint
 
+      # 2. Tests Unitarios (Rápidos)
+      # El flag -- --run fuerza a Vitest a correr una vez y cerrar (sin modo watch)
+      - name: Ejecutar Tests Unitarios (Vitest)
+        run: npm run test -- --run
+
+      # 3. Verificar que el proyecto compila correctamente
       - name: Verificar Build
         run: npm run build
+
+      # 4. Tests E2E (Playwright)
+      # Primero instalamos los navegadores necesarios
+      - name: Instalar Navegadores de Playwright
+        run: npx playwright install --with-deps
+
+      # Ejecutamos las pruebas E2E
+      # (Playwright levantará 'npm run dev' automáticamente gracias a tu config)
+      - name: Ejecutar Tests E2E (Playwright)
+        run: npm run test:e2e
 
   # TAREA 2: DESPLIEGUE A VERCEL (CD)
   deploy:
     name: Desplegar a Vercel
-    needs: build-and-test # <--- ESTA ES LA CLAVE: Espera a que el CI pase
+    needs: build-and-test # <--- IMPORTANTE: Solo despliega si 'build-and-test' pasó exitosamente
     runs-on: ubuntu-latest
-    # Solo desplegamos si es un push (no en PRs abiertas para evitar duplicados si usas Vercel Bot)
-    # Opcional: elimina el 'if' si quieres previews en PRs también desde aquí.
+    # Solo desplegamos si es un push (evita desplegar PRs abiertas dos veces si usas Vercel Bot)
     if: github.event_name == 'push'
     steps:
       - name: Checkout del código
@@ -45,7 +61,6 @@ jobs:
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          # Lógica: Si es la rama 'main' usa '--prod', si no, despliega como Preview
-          vercel-args: ${{ github.ref == 'refs/heads/main' && '--prod' || '' }}
+          vercel-org-id: ${{ secrets.ORG_ID }}
+          vercel-project-id: ${{ secrets.PROJECT_ID }}
+          vercel-args: '--prod'
