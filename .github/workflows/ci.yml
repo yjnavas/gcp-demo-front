@@ -1,11 +1,11 @@
 name: CI/CD - Calidad y Despliegue Dinámico
 
 on:
-  # 1. Disparar en Push (Merge) solo a ramas clave
+  # 1. PUSH: Se activa en CUALQUIER rama (para que TAREA 1 corra siempre)
   push:
     branches:
       - '**'
-  # 2. Disparar en Pull Requests hacia ramas clave (en cada commit)
+  # 2. PR: Se activa en PRs hacia main y development
   pull_request:
     types: [opened, synchronize, reopened]
     branches:
@@ -14,6 +14,7 @@ on:
 
 jobs:
   # --- TAREA 1: VERIFICACIÓN DE CÓDIGO (Lint, Build y Tests) ---
+  # ESTA TAREA CORRE SIEMPRE (En cualquier rama)
   build-and-test:
     name: Verificar Código (CI)
     runs-on: ubuntu-latest
@@ -50,10 +51,19 @@ jobs:
         run: npm run test:e2e
 
   # --- TAREA 2: DESPLIEGUE INTELIGENTE A VERCEL ---
+  # ESTA TAREA SOLO CORRE EN PRs O RAMAS ESPECÍFICAS
   deploy:
     name: Desplegar a Vercel
-    needs: build-and-test # ¡Seguridad primero! Solo despliega si todo pasa.
+    needs: build-and-test
     runs-on: ubuntu-latest
+    # CONDICIÓN MÁGICA:
+    # Ejecutar SOLO SI:
+    # 1. Es un Pull Request
+    # 2. O es un Push a la rama 'main'
+    # 3. O es un Push a la rama 'development'
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development'))
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
@@ -78,14 +88,11 @@ jobs:
             VERCEL_ARGS="" 
           fi
 
-          # 2. Bajar configuración del entorno correcto
-          echo "⬇️ Pulling Vercel Config..."
+          # 2. Bajar configuración
           vercel pull --yes --environment=$VERCEL_ENV --token=$VERCEL_TOKEN
 
-          # 3. Construir el proyecto (Build)
-          echo "🔨 Building Project..."
+          # 3. Construir
           vercel build $VERCEL_ARGS --token=$VERCEL_TOKEN
 
-          # 4. Desplegar los artefactos construidos
-          echo "☁️ Deploying..."
+          # 4. Desplegar
           vercel deploy --prebuilt $VERCEL_ARGS --token=$VERCEL_TOKEN
