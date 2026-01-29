@@ -4,8 +4,7 @@ on:
   # 1. Disparar en Push (Merge) solo a ramas clave
   push:
     branches:
-      - main
-      - development
+      - '**'
   # 2. Disparar en Pull Requests hacia ramas clave (en cada commit)
   pull_request:
     types: [opened, synchronize, reopened]
