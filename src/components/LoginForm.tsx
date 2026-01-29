@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { Building2, Scale } from 'lucide-react';
 
-export default function LoginPage() {
+export function LoginForm() {
   return (
     <div className="flex min-h-screen w-full flex-col lg:flex-row">
       {/* Left Side - Gray Background */}
